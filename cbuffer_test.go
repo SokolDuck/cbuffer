@@ -13,18 +13,18 @@ func (i IntComparable) Equal(other IntComparable) bool {
 }
 
 func TestOrderedIntCB(t *testing.T) {
-	cb := NewOrderedCircuitBuffer[IntComparable](3)
+	cb := NewOrderedCircularBuffer[IntComparable](3)
 
-	t.Logf("CircuitBuffer cap: %v", cb.Cap())
-	t.Logf("CircuitBuffer len: %v", cb.Len())
+	t.Logf("CircularBuffer cap: %v", cb.Cap())
+	t.Logf("CircularBuffer len: %v", cb.Len())
 
 	cb.Add(1)
 	cb.Add(2)
 	cb.Add(3)
 	cb.Add(4)
 
-	t.Logf("CircuitBuffer cap: %v", cb.Cap())
-	t.Logf("CircuitBuffer len: %v", cb.Len())
+	t.Logf("CircularBuffer cap: %v", cb.Cap())
+	t.Logf("CircularBuffer len: %v", cb.Len())
 
 	zeroItem := IntComparable(2)
 
@@ -36,7 +36,7 @@ func TestOrderedIntCB(t *testing.T) {
 }
 
 func TestOCBIteration(t *testing.T) {
-	cb := NewOrderedCircuitBuffer[IntComparable](3)
+	cb := NewOrderedCircularBuffer[IntComparable](3)
 
 	cb.Add(1)
 	cb.Add(2)
@@ -75,7 +75,7 @@ func TestOCBIteration(t *testing.T) {
 }
 
 func TestCBBreakIteration(t *testing.T) {
-	cb := NewCircuitBuffer[int](3)
+	cb := NewCircularBuffer[int](3)
 
 	for i := range []int{1, 3, 5, 4} {
 		cb.Add(i)
@@ -103,7 +103,7 @@ func TestCBBreakIteration(t *testing.T) {
 }
 
 func TestOCBWrongBreakIteration(t *testing.T) {
-	ocb := NewOrderedCircuitBuffer[IntComparable](3)
+	ocb := NewOrderedCircularBuffer[IntComparable](3)
 
 	for i := range []int{1, 3, 5, 4} {
 		err := ocb.Add(IntComparable(i))
@@ -116,7 +116,7 @@ func TestOCBWrongBreakIteration(t *testing.T) {
 }
 
 func TestOCBSearch(t *testing.T) {
-	ocb := NewOrderedCircuitBuffer[IntComparable](100)
+	ocb := NewOrderedCircularBuffer[IntComparable](100)
 
 	for i := 0; i < 100; i++ {
 		err := ocb.Add(IntComparable(i))
@@ -139,7 +139,7 @@ func TestOCBSearch(t *testing.T) {
 }
 
 func TestOCBSearchNotFound(t *testing.T) {
-	ocb := NewOrderedCircuitBuffer[IntComparable](50)
+	ocb := NewOrderedCircularBuffer[IntComparable](50)
 
 	for i := 0; i < 100; i++ {
 		err := ocb.Add(IntComparable(i))

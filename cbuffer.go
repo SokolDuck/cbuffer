@@ -5,7 +5,7 @@ import (
 	"sync"
 )
 
-type CircuitBuffer[T any] struct {
+type CircularBuffer[T any] struct {
 	buf        []T
 	len        int
 	startIndex int
@@ -14,23 +14,23 @@ type CircuitBuffer[T any] struct {
 }
 
 type CBIterator[T any] struct {
-	ocb      *CircuitBuffer[T]
+	ocb      *CircularBuffer[T]
 	iterChan chan *T
 	index    int
 }
 
-func NewCircuitBuffer[T any](size int) *CircuitBuffer[T] {
+func NewCircularBuffer[T any](size int) *CircularBuffer[T] {
 	var mu sync.RWMutex
-	return &CircuitBuffer[T]{
+	return &CircularBuffer[T]{
 		make([]T, size), size, 0, nil, &mu,
 	}
 }
 
-func (ocb *CircuitBuffer[T]) String() string {
-	return fmt.Sprintf("CircuitBuffer(%v)", ocb.buf)
+func (ocb *CircularBuffer[T]) String() string {
+	return fmt.Sprintf("CircularBuffer(%v)", ocb.buf)
 }
 
-func (ocb *CircuitBuffer[T]) iterateCB() *CBIterator[T] {
+func (ocb *CircularBuffer[T]) iterateCB() *CBIterator[T] {
 	iterator := &CBIterator[T]{
 		ocb, make(chan *T), 0,
 	}
@@ -56,7 +56,7 @@ func (iter *CBIterator[T]) Next() *T {
 	return &nextItem
 }
 
-func (ocb *CircuitBuffer[T]) GetItem(index int) T {
+func (ocb *CircularBuffer[T]) GetItem(index int) T {
 	ocb.mu.RLock()
 	defer ocb.mu.RUnlock()
 
@@ -64,7 +64,7 @@ func (ocb *CircuitBuffer[T]) GetItem(index int) T {
 	return ocb.buf[realIndex]
 }
 
-func (ocb *CircuitBuffer[T]) Add(item T) bool {
+func (ocb *CircularBuffer[T]) Add(item T) bool {
 	ocb.mu.Lock()
 	defer ocb.mu.Unlock()
 
@@ -85,19 +85,19 @@ func (ocb *CircuitBuffer[T]) Add(item T) bool {
 	return removeFlag
 }
 
-func (ocb *CircuitBuffer[T]) Len() int {
+func (ocb *CircularBuffer[T]) Len() int {
 	ocb.mu.RLock()
 	defer ocb.mu.RUnlock()
 
 	return ocb.len
 }
 
-func (ocb *CircuitBuffer[T]) Cap() int {
+func (ocb *CircularBuffer[T]) Cap() int {
 
 	return cap(ocb.buf)
 }
 
-func (ocb *CircuitBuffer[T]) Iter() chan *T {
+func (ocb *CircularBuffer[T]) Iter() chan *T {
 
 	iterator := ocb.iterateCB()
 
@@ -115,7 +115,7 @@ func (ocb *CircuitBuffer[T]) Iter() chan *T {
 	return iterator.iterChan
 }
 
-func (ocb *CircuitBuffer[T]) Break() {
+func (ocb *CircularBuffer[T]) Break() {
 	// This method need to kill dead goroutine if we break Iter loop earlier.
 
 	iterator := ocb.iter
@@ -134,21 +134,21 @@ type Comparable[T any] interface {
 	Equal(T) bool
 }
 
-type OrderedCircuitBuffer[T Comparable[T]] struct {
-	CircuitBuffer[T]
+type OrderedCircularBuffer[T Comparable[T]] struct {
+	CircularBuffer[T]
 }
 
-func NewOrderedCircuitBuffer[T Comparable[T]](size int) *OrderedCircuitBuffer[T] {
-	return &OrderedCircuitBuffer[T]{
-		CircuitBuffer[T]{make([]T, size), size, 0, nil, new(sync.RWMutex)},
+func NewOrderedCircularBuffer[T Comparable[T]](size int) *OrderedCircularBuffer[T] {
+	return &OrderedCircularBuffer[T]{
+		CircularBuffer[T]{make([]T, size), size, 0, nil, new(sync.RWMutex)},
 	}
 }
 
-func (ocb *OrderedCircuitBuffer[T]) String() string {
-	return fmt.Sprintf("OrderedCircuitBuffer(%v)", ocb.buf)
+func (ocb *OrderedCircularBuffer[T]) String() string {
+	return fmt.Sprintf("OrderedCircularBuffer(%v)", ocb.buf)
 }
 
-func (ocb *OrderedCircuitBuffer[T]) Add(item T) error {
+func (ocb *OrderedCircularBuffer[T]) Add(item T) error {
 
 	addIndex := ocb.len
 
@@ -176,7 +176,7 @@ func (ocb *OrderedCircuitBuffer[T]) Add(item T) error {
 	return nil
 }
 
-func (ocb *OrderedCircuitBuffer[T]) Search(value T) (index int, found bool) {
+func (ocb *OrderedCircularBuffer[T]) Search(value T) (index int, found bool) {
 	ocb.mu.RLock()
 	defer ocb.mu.RUnlock()
 

@@ -1,8 +1,14 @@
-# CircuitBuffer Go Module
+# CircularBuffer Go Module
 
-This Go module provides two data structures: **`CircuitBuffer`** and **`OrderedCircuitBuffer`**. Both are circular buffers, or ring buffers, which are data structures that use a single, fixed-size buffer as if it were connected end-to-end. The **`OrderedCircuitBuffer`** maintains the order of elements and can perform a binary search.
+This Go module provides two data structures: **`CircularBuffer`** and **`OrderedCircularBuffer`**. Both are circular buffers, or ring buffers, which are data structures that use a single, fixed-size buffer as if it were connected end-to-end. The **`OrderedCircularBuffer`** maintains the order of elements and can perform a binary search.
 
 These buffers can store any type that implements the **`Comparable`** interface.
+
+It can **look like/using** a sliding window from the outside. 
+![](https://res.cloudinary.com/practicaldev/image/fetch/s--YIp-yToX--/c_limit%2Cf_auto%2Cfl_progressive%2Cq_auto%2Cw_880/https://dev-to-uploads.s3.amazonaws.com/i/m12gjqex1tbxgsunop0h.png)
+
+Under the hood, it is implemented as a ring buffer  
+![](https://miro.medium.com/v2/resize:fit:308/format:webp/1*fBdwT5VKlTbXBoq5QsNoug.jpeg)
 
 ```golang
 type Comparable[T any] interface {
@@ -10,8 +16,8 @@ type Comparable[T any] interface {
 	Equal(T) bool
 }
 
-type CircuitBuffer[T Comparable[T]];
-type OrderedCircuitBuffer[T Comparable[T]];
+type CircularBuffer[T Comparable[T]];
+type OrderedCircularBuffer[T Comparable[T]];
 ```
 
 ## Features
@@ -21,11 +27,11 @@ type OrderedCircuitBuffer[T Comparable[T]];
 
 ## Main Functions
 
-- `NewCircuitBuffer[T Comparable[T]](size int) CircuitBuffer[T}]`: Creates a new CircuitBuffer of a given size.
+- `NewCircularBuffer[T Comparable[T]](size int) CircularBuffer[T}]`: Creates a new CircularBuffer of a given size.
 
-- `NewOrderedCircuitBuffer[T Comparable[T]](size int) OrderedCircuitBuffer[T]`: Creates a new OrderedCircuitBuffer of a given size.
+- `NewOrderedCircularBuffer[T Comparable[T]](size int) OrderedCircularBuffer[T]`: Creates a new OrderedCircularBuffer of a given size.
 
-### CircuitBuffer Functions 
+### CircularBuffer Functions 
 - `Add(item T) bool`: Adds a new item to the buffer. If the buffer is full, it will replace the oldest item.
 
 - `GetItem(index int) T`: Return item by index.
@@ -40,8 +46,8 @@ type OrderedCircuitBuffer[T Comparable[T]];
 
 - `String() string`: To support "%s" and conversion to string.
 
-### OrderedCircuitBuffer Functions
-- All the same as CircuitBuffer
+### OrderedCircularBuffer Functions
+- All the same as CircularBuffer
 
 - `Add(item T) error`: Adds a new item to the buffer. The item must be greater than or equal to the last item in the buffer.
 
@@ -51,9 +57,9 @@ type OrderedCircuitBuffer[T Comparable[T]];
 
 ## Limitations
 
-- The binary search in **`OrderedCircuitBuffer`** assumes that the buffer is sorted in ascending order. If this condition is not met, the search results will be incorrect.
+- The binary search in **`OrderedCircularBuffer`** assumes that the buffer is sorted in ascending order. If this condition is not met, the search results will be incorrect.
 
-- Attempting to add an item to an **`OrderedCircuitBuffer`** that is less than the last item in the buffer will return an error.
+- Attempting to add an item to an **`OrderedCircularBuffer`** that is less than the last item in the buffer will return an error.
 
 - The capacity of the buffer is set at creation and cannot be changed afterwards.
 
@@ -65,11 +71,11 @@ Here are a few examples:
 
 1. **Log Buffering**
 
-	Imagine you have an application that constantly logs data, but you only care about preserving the last N log entries due to memory constraints. You could use the CircuitBuffer to keep only the most recent N log entries in memory, dropping older entries as necessary.
+	Imagine you have an application that constantly logs data, but you only care about preserving the last N log entries due to memory constraints. You could use the CircularBuffer to keep only the most recent N log entries in memory, dropping older entries as necessary.
 
 2. **Time Series Data**
 
-	If you're working with time series data where data points arrive in an ordered fashion (e.g. stock prices, sensor readings), you might want to keep a buffer of the latest N points for quick calculations like moving averages. Here, OrderedCircuitBuffer would be appropriate. You could also search for specific data points in the buffer using binary search, which is faster than linear search.
+	If you're working with time series data where data points arrive in an ordered fashion (e.g. stock prices, sensor readings), you might want to keep a buffer of the latest N points for quick calculations like moving averages. Here, OrderedCircularBuffer would be appropriate. You could also search for specific data points in the buffer using binary search, which is faster than linear search.
 
 3. **Streaming Data**
 
@@ -77,7 +83,7 @@ Here are a few examples:
 
 4. **Producer-Consumer Problem**
 
-	The CircuitBuffer can be used to solve the producer-consumer problem in concurrent programming. The producer can continuously add items to the buffer, and the consumer can read items from the buffer. If the buffer is full, the producer can overwrite the oldest items.
+	The CircularBuffer can be used to solve the producer-consumer problem in concurrent programming. The producer can continuously add items to the buffer, and the consumer can read items from the buffer. If the buffer is full, the producer can overwrite the oldest items.
 
 
 ## Examples
@@ -92,7 +98,7 @@ import (
 	cb "github.com/SokolDuck/cbuffer"
 )
 
-func ProcessLogs(buffer *cb.CircuitBuffer[string]) {
+func ProcessLogs(buffer *cb.CircularBuffer[string]) {
 	// Call buffer.Break() if the Iter loop stops before it runs out of data. Or call it with "deffer" to make sure you don't spawn dead goroutines.
 	defer buffer.Break()
 
@@ -103,7 +109,7 @@ func ProcessLogs(buffer *cb.CircuitBuffer[string]) {
 }
 
 func main() {
-	cb := cb.NewCircuitBuffer[string](5)
+	cb := cb.NewCircularBuffer[string](5)
 
 	logs := []string{"Log1", "Log2", "Log3", "Log4", "Log5", "Log6", "Log7"}
 
@@ -140,7 +146,7 @@ func (ts TimeSeriesData) Equal(other TimeSeriesData) bool {
 }
 
 func main() {
-	cbuf := cb.NewOrderedCircuitBuffer[TimeSeriesData](5)
+	cbuf := cb.NewOrderedCircularBuffer[TimeSeriesData](5)
 
 	dataPoints := make([]TimeSeriesData, 8)
 
