@@ -1,109 +1,180 @@
 package cbuffer
 
-// type CircularBuffer struct {
-// 	len int
-// 	cap int
-// 	buf []int
+import (
+	"fmt"
+)
 
-// 	startIndex int
-// 	iterDoneCN chan bool
-// }
+type Comparable[T any] interface {
+	Less(T) bool
+	Equal(T) bool
+}
 
-// type ICircularBuffer interface {
-// 	Len() int
-// 	Cap() int
-// 	GetItem(int) int
-// 	Iter() chan *int
-// }
+type CircuitBuffer[T Comparable[T]] struct {
+	buf        []T
+	len        int
+	startIndex int
+	iter       *CBIterator[T]
+}
 
-// func (cb *CircularBuffer) Len() int {
-// 	return cb.len
-// }
+type CBIterator[T Comparable[T]] struct {
+	ocb      *CircuitBuffer[T]
+	iterChan chan *T
+	index    int
+}
 
-// func (cb *CircularBuffer) Cap() int {
-// 	return cb.cap
-// }
+func NewCircuitBuffer[T Comparable[T]](size int) *CircuitBuffer[T] {
+	return &CircuitBuffer[T]{
+		make([]T, size), size, 0, nil,
+	}
+}
 
-// func (cb *CircularBuffer) GetItem(index int) int {
-// 	return cb.buf[(cb.startIndex+index)%cb.Len()]
-// }
+func (ocb *CircuitBuffer[T]) String() string {
+	return fmt.Sprintf("CircuitBuffer(%v)", ocb.buf)
+}
 
-// func (cb *CircularBuffer) Iter() chan *int {
+func (ocb *CircuitBuffer[T]) iterateCB() *CBIterator[T] {
+	iterator := &CBIterator[T]{
+		ocb, make(chan *T), 0,
+	}
 
-// 	c := make(chan *int)
+	if ocb.iter != nil {
+		err := fmt.Errorf("circuit buffer already iterated or break iteration incorrect %v", ocb)
+		panic(err)
+	}
 
-// 	go func(cb *CircularBuffer) {
-// 		for i := 0; i < cb.Len(); i++ {
-// 			val := cb.GetItem(i)
-// 			c <- &val
-// 		}
-// 		close(c)
-// 	}(cb)
+	ocb.iter = iterator
 
-// 	return c
-// }
+	return iterator
+}
 
-// /*
-// size = 5
+func (iter *CBIterator[T]) Len() int {
+	return iter.ocb.Len()
+}
 
-// [0, 0, 0, 0, 0]
+func (iter *CBIterator[T]) Next() *T {
+	nextItem := iter.ocb.GetItem(iter.index)
+	iter.index++
 
-// startIndex = 0
-// len = 0
-// cap = 5
+	return &nextItem
+}
 
-// Add(1)
+func (ocb *CircuitBuffer[T]) GetItem(index int) T {
+	realIndex := (ocb.startIndex + index) % ocb.Cap()
+	return ocb.buf[realIndex]
+}
 
-// [1, 0, 0, 0, 0]
-// len++ // 1
-// cap = 5
-// startIndex = 0
+func (ocb *CircuitBuffer[T]) Add(item T) bool {
+	removeFlag := false
+	addIndex := ocb.Len()
 
-// ...
+	if ocb.Len() == ocb.Cap() {
+		addIndex = ocb.startIndex
+		ocb.startIndex++
+		ocb.startIndex %= ocb.Len()
+		removeFlag = true
+	} else {
+		ocb.len++
+	}
 
-// Add(5)
-// len ++  == cap// 5
-// cap = 5
-// startIndex = 0
-// [1, 2, 3, 4, 5]
+	ocb.buf[addIndex] = item
 
-// Add(6)
-// len == cap // 5
-// startIndex++ // 1
+	return removeFlag
+}
 
-// Array in mem    ->  Iter via CircularBuffer
-// [6, 2, 3, 4, 5] -> [2, 3, 4, 5, 6]
-// Add(7)
-// [6, 7, 3, 4, 5] -> [3, 4, 5, 6, 7]
-// Add(8)
-// [6, 7, 8, 4, 5] -> [4, 5, 6, 7, 8]
-// Add(9)
-// [6, 7, 8, 9, 5] -> [5, 6, 7, 8, 9]
-// startIndex++ // 4
+func (ocb *CircuitBuffer[T]) Len() int {
+	return ocb.len
+}
 
-// Add(10)
-// [6, 7, 8, 9, 10] -> [6, 7, 8, 9, 10]
-// startIndex++ % len // 0
-// */
-// func (cb *CircularBuffer) Add(value int) bool {
-// 	removeFlag := false
-// 	addIndex := cb.Len()
+func (ocb *CircuitBuffer[T]) Cap() int {
+	return cap(ocb.buf)
+}
 
-// 	if cb.Len() == cb.Cap() {
-// 		addIndex = cb.startIndex
-// 		cb.startIndex++
-// 		cb.startIndex %= cb.Len()
-// 		removeFlag = true
-// 	} else {
-// 		cb.len++
-// 	}
-// 	cb.buf[addIndex] = value
+func (ocb *CircuitBuffer[T]) Iter() chan *T {
 
-// 	return removeFlag
-// }
+	iterator := ocb.iterateCB()
 
-// func NewIntCircularBuffer(size int) *CircularBuffer {
-// 	return &CircularBuffer{
-// 		0, size, make([]int, size), 0, nil,
-// 	}
-// }
+	go func(iterator *CBIterator[T]) {
+		for iterator.index < iterator.Len() {
+			iterator.iterChan <- iterator.Next()
+		}
+		close(iterator.iterChan)
+		iterator.ocb.iter = nil
+	}(iterator)
+
+	return iterator.iterChan
+}
+
+func (ocb *CircuitBuffer[T]) Break() {
+	// This method need to kill dead goroutine if we break Iter loop earlier.
+
+	iterator := ocb.iter
+
+	if iterator != nil {
+		iterator.index = iterator.Len()
+		<-iterator.iterChan
+
+		ocb.iter = nil
+	}
+}
+
+// Ordered
+type OrderedCircuitBuffer[T Comparable[T]] struct {
+	CircuitBuffer[T]
+}
+
+func NewOrderedCircuitBuffer[T Comparable[T]](size int) *OrderedCircuitBuffer[T] {
+	return &OrderedCircuitBuffer[T]{
+		CircuitBuffer[T]{make([]T, size), size, 0, nil},
+	}
+}
+
+func (ocb *OrderedCircuitBuffer[T]) String() string {
+	return fmt.Sprintf("OrderedCircuitBuffer(%v)", ocb.buf)
+}
+
+func (ocb *OrderedCircuitBuffer[T]) Add(item T) error {
+	addIndex := ocb.Len()
+
+	if ocb.len != 0 {
+		lastItem := ocb.GetItem(ocb.len - 1)
+
+		if item.Less(lastItem) {
+			err := fmt.Errorf("%v can't be added in Ordered Circuit Buffer. Last element in cb %v", item, lastItem)
+			return err
+		}
+	}
+
+	if ocb.Len() == ocb.Cap() {
+		addIndex = ocb.startIndex
+		ocb.startIndex++
+		ocb.startIndex %= ocb.Len()
+	} else {
+		ocb.len++
+	}
+
+	ocb.buf[addIndex] = item
+
+	return nil
+}
+
+func (ocb *OrderedCircuitBuffer[T]) Search(value T) (index int, found bool) {
+	start := 0
+	end := ocb.Len() - 1
+
+	for start < end {
+		index = start + (end-start)/2
+		item := ocb.GetItem(index)
+
+		if item.Equal(value) {
+			found = true
+			return
+		} else if item.Less(value) {
+			start = index + 1
+		} else {
+			end = index - 1
+		}
+
+	}
+
+	return -1, found
+}

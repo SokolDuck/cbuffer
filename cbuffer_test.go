@@ -1,102 +1,161 @@
 package cbuffer
 
-// import (
-// 	"testing"
-// )
+import "testing"
 
-// // TestIter create new CB
-// func TestIter(t *testing.T) {
+type D struct {
+	value int
+}
 
-// 	cb := NewIntCircularBuffer(5)
+func (d D) Less(other D) bool {
+	return d.value < other.value
+}
 
-// 	cb.Add(1)
-// 	cb.Add(2)
-// 	cb.Add(3)
+func (d D) Equal(other D) bool {
+	return d == other
+}
 
-// 	for v := range cb.Iter() {
-// 		t.Log(*v)
-// 	}
-// }
+func TestOrderedIntCB(t *testing.T) {
+	cb := NewOrderedCircuitBuffer[D](3)
 
-// // TestGetItem create new CB and check TestGetItem function
-// func TestGetItem(t *testing.T) {
-// 	cb := NewIntCircularBuffer(5)
+	t.Logf("CircuitBuffer cap: %v", cb.Cap())
+	t.Logf("CircuitBuffer len: %v", cb.Len())
 
-// 	cb.Add(1)
-// 	cb.Add(2)
-// 	cb.Add(3)
+	cb.Add(D{1})
+	cb.Add(D{2})
+	cb.Add(D{3})
+	cb.Add(D{4})
 
-// 	for index, i := range []int{1, 2, 3} {
-// 		if i != cb.GetItem(index) {
-// 			t.Fatalf("Expected %v by index %v, got %v", i, index, cb.GetItem(index))
-// 		}
-// 	}
+	zeroItem := D{2}
 
-// }
+	if cb.GetItem(0) != zeroItem {
+		t.Fatalf("%v != %v", cb.GetItem(0), zeroItem)
+	} else {
+		t.Logf("item at index 0 == %v", cb.GetItem(0))
+	}
+}
 
-// // TestLen create new CB and check Len function
-// func TestLen(t *testing.T) {
-// 	cb := NewIntCircularBuffer(5)
+func TestOCBIteration(t *testing.T) {
+	cb := NewOrderedCircuitBuffer[D](3)
 
-// 	_len := cb.Len()
-// 	if _len != 0 {
-// 		t.Fatal("Let was", _len, "expected 0")
-// 	}
+	cb.Add(D{1})
+	cb.Add(D{2})
+	cb.Add(D{3})
+	cb.Add(D{4})
 
-// 	cb.Add(1)
-// 	cb.Add(2)
-// 	cb.Add(3)
+	index := 0
+	check_list := []D{{2}, {3}, {4}}
 
-// 	_len = cb.Len()
-// 	if _len != 3 {
-// 		t.Fatal("Let was", _len, "expected 3")
-// 	}
-// }
+	// Check that no iteration object related to this OCB
+	if cb.iter != nil {
+		t.Fatalf("OCB %v must not contain an iter object", cb)
+	}
 
-// // TestCap create new CB and check Cap function
-// func TestCap(t *testing.T) {
-// 	cb := NewIntCircularBuffer(5)
+	// Check iteration function
+	for item := range cb.Iter() {
+		t.Logf("Element %v: %v", index, *item)
 
-// 	_cap := cb.Cap()
-// 	if _cap != 5 {
-// 		t.Fatal("Let was", _cap, "expected 5")
-// 	}
-// }
+		// Check that no iteration object created and related
+		if cb.iter == nil && item.value != 4 {
+			t.Fatalf("OCB %v must contain an iter object, but got nil", cb)
+		}
 
-// func TestAddMoreThanSize(t *testing.T) {
-// 	cb := NewIntCircularBuffer(3)
+		if !item.Equal(check_list[index]) {
+			t.Fatalf("Index %v: %v != %v (%v)", index, *item, check_list[index], cb)
+		}
 
-// 	cb.Add(1)
-// 	cb.Add(2)
-// 	cb.Add(3)
-// 	cb.Add(4)
+		index++
+	}
 
-// 	if cb.Len() != cb.Cap() {
-// 		t.Fatalf("Len %v != cap %v, but expected", cb.Len(), cb.Cap())
-// 	}
+	// Check that iteration object removed correctly
+	if cb.iter != nil {
+		t.Fatalf("OCB %v must not contain an iter object after end of iteration", cb)
+	}
 
-// 	for index, v := range []int{2, 3, 4} {
-// 		if v != cb.GetItem(index) {
-// 			t.Fatalf("Expected %v by index %v, got %v", v, index, cb.GetItem(index))
-// 		}
-// 	}
+}
 
-// 	cb.Add(5)
-// 	cb.Add(6)
-// 	cb.Add(67)
+func TestCBBreakIteration(t *testing.T) {
+	cb := NewCircuitBuffer[D](3)
 
-// 	for index, v := range []int{5, 6, 67} {
-// 		if v != cb.GetItem(index) {
-// 			t.Fatalf("Expected %v by index %v, got %v", v, index, cb.GetItem(index))
-// 		}
-// 	}
-// }
+	for i := range []int{1, 3, 5, 4} {
+		cb.Add(D{i})
+	}
 
-// func TestBinarySearchInCB(t *testing.T) {
-// 	cb := NewIntCircularBuffer(50)
+	index := 0
 
-// 	for _, v := range []int{333, 725, 698, 372, 288, 962, 850, 483, 539, 199, 844, 623, 952, 276, 412, 320, 597, 394, 403, 728, 96, 800, 306, 930, 418, 168, 501, 435, 457, 140, 112, 974, 41, 630, 861, 441, 307, 826, 2, 613, 196, 827, 373, 93, 451, 980, 1, 483, 346, 214} {
-// 		cb.Add(v)
-// 	}
+	// Check iteration function
+	for item := range cb.Iter() {
+		t.Logf("Element %v: %v", index, *item)
 
-// }
+		// Check that no iteration object created and related
+		if item.value != 3 {
+			cb.Break()
+			break
+		}
+
+		index++
+	}
+
+	// Check that iteration object removed correctly
+	if cb.iter != nil {
+		t.Fatalf("OCB %v must not contain an iter object after Break of iteration", cb)
+	}
+}
+
+func TestOCBWrongBreakIteration(t *testing.T) {
+	ocb := NewOrderedCircuitBuffer[D](3)
+
+	for i := range []int{1, 3, 5, 4} {
+		err := ocb.Add(D{i})
+
+		if err != nil && i != 4 {
+			t.Fatalf("%v can't be inserted into ocb %v", i, ocb)
+		}
+	}
+
+}
+
+func TestOCBSearch(t *testing.T) {
+	ocb := NewOrderedCircuitBuffer[D](100)
+
+	for i := 0; i < 100; i++ {
+		err := ocb.Add(D{i})
+
+		if err != nil {
+			t.Fatalf("%v can't be inserted into ocb %s", i, ocb)
+		}
+	}
+
+	expected := 55
+	index, found := ocb.Search(D{expected})
+	if !found {
+		t.Fatalf("%v can't be found in ocb %s", expected, ocb)
+	}
+
+	if index != expected {
+		t.Fatalf("%v have wrong index %v (expected 55) founded in ocb %s", expected, index, ocb)
+	}
+
+}
+
+func TestOCBSearchNotFound(t *testing.T) {
+	ocb := NewOrderedCircuitBuffer[D](50)
+
+	for i := 0; i < 100; i++ {
+		err := ocb.Add(D{i})
+
+		if err != nil {
+			t.Fatalf("%v can't be inserted into ocb %s", i, ocb)
+		}
+	}
+
+	expected := 20
+	index, found := ocb.Search(D{expected})
+	if found {
+		t.Fatalf("%v couldn't be found in ocb %s", expected, ocb)
+	}
+
+	if index != -1 {
+		t.Fatalf("Expected index -1, got %v, while searching %v in %s", index, expected, ocb)
+	}
+
+}
