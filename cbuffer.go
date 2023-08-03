@@ -4,25 +4,20 @@ import (
 	"fmt"
 )
 
-type Comparable[T any] interface {
-	Less(T) bool
-	Equal(T) bool
-}
-
-type CircuitBuffer[T Comparable[T]] struct {
+type CircuitBuffer[T any] struct {
 	buf        []T
 	len        int
 	startIndex int
 	iter       *CBIterator[T]
 }
 
-type CBIterator[T Comparable[T]] struct {
+type CBIterator[T any] struct {
 	ocb      *CircuitBuffer[T]
 	iterChan chan *T
 	index    int
 }
 
-func NewCircuitBuffer[T Comparable[T]](size int) *CircuitBuffer[T] {
+func NewCircuitBuffer[T any](size int) *CircuitBuffer[T] {
 	return &CircuitBuffer[T]{
 		make([]T, size), size, 0, nil,
 	}
@@ -118,6 +113,11 @@ func (ocb *CircuitBuffer[T]) Break() {
 }
 
 // Ordered
+type Comparable[T any] interface {
+	Less(T) bool
+	Equal(T) bool
+}
+
 type OrderedCircuitBuffer[T Comparable[T]] struct {
 	CircuitBuffer[T]
 }

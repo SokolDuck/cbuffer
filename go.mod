@@ -1,3 +1,3 @@
-module SokolDuck/cbuffer
+module github.com/SokolDuck/cbuffer
 
 go 1.20

@@ -2,30 +2,29 @@ package cbuffer
 
 import "testing"
 
-type D struct {
-	value int
+type IntComparable int
+
+func (i IntComparable) Less(other IntComparable) bool {
+	return i < other
 }
 
-func (d D) Less(other D) bool {
-	return d.value < other.value
-}
-
-func (d D) Equal(other D) bool {
-	return d == other
+func (i IntComparable) Equal(other IntComparable) bool {
+	return i == other
 }
 
 func TestOrderedIntCB(t *testing.T) {
-	cb := NewOrderedCircuitBuffer[D](3)
+	cb := NewOrderedCircuitBuffer[IntComparable](3)
 
 	t.Logf("CircuitBuffer cap: %v", cb.Cap())
 	t.Logf("CircuitBuffer len: %v", cb.Len())
 
-	cb.Add(D{1})
-	cb.Add(D{2})
-	cb.Add(D{3})
-	cb.Add(D{4})
+	cb.Add(1)
+	cb.Add(2)
+	cb.Add(3)
+	cb.Add(4)
 
-	zeroItem := D{2}
+	var zeroItem IntComparable
+	zeroItem = 2
 
 	if cb.GetItem(0) != zeroItem {
 		t.Fatalf("%v != %v", cb.GetItem(0), zeroItem)
@@ -35,15 +34,15 @@ func TestOrderedIntCB(t *testing.T) {
 }
 
 func TestOCBIteration(t *testing.T) {
-	cb := NewOrderedCircuitBuffer[D](3)
+	cb := NewOrderedCircuitBuffer[IntComparable](3)
 
-	cb.Add(D{1})
-	cb.Add(D{2})
-	cb.Add(D{3})
-	cb.Add(D{4})
+	cb.Add(1)
+	cb.Add(2)
+	cb.Add(3)
+	cb.Add(4)
 
 	index := 0
-	check_list := []D{{2}, {3}, {4}}
+	check_list := []IntComparable{2, 3, 4}
 
 	// Check that no iteration object related to this OCB
 	if cb.iter != nil {
@@ -55,7 +54,7 @@ func TestOCBIteration(t *testing.T) {
 		t.Logf("Element %v: %v", index, *item)
 
 		// Check that no iteration object created and related
-		if cb.iter == nil && item.value != 4 {
+		if cb.iter == nil && *item != 4 {
 			t.Fatalf("OCB %v must contain an iter object, but got nil", cb)
 		}
 
