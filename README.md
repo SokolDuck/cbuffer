@@ -21,9 +21,9 @@ type OrderedCircuitBuffer[T Comparable[T]];
 
 ## Main Functions
 
-- `NewCircuitBuffer[T Comparable[T]](size int)`: Creates a new CircuitBuffer of a given size.
+- `NewCircuitBuffer[T Comparable[T]](size int) CircuitBuffer[T}]`: Creates a new CircuitBuffer of a given size.
 
-- `NewOrderedCircuitBuffer[T Comparable[T]](size int)`: Creates a new OrderedCircuitBuffer of a given size.
+- `NewOrderedCircuitBuffer[T Comparable[T]](size int) OrderedCircuitBuffer[T]`: Creates a new OrderedCircuitBuffer of a given size.
 
 ### CircuitBuffer Functions 
 - `Add(item T) bool`: Adds a new item to the buffer. If the buffer is full, it will replace the oldest item.
@@ -38,12 +38,16 @@ type OrderedCircuitBuffer[T Comparable[T]];
 
 - `Break()`: Breaks the iteration early and cleans up the iterator.
 
+- `String() string`: To support "%s" and conversion to string.
+
 ### OrderedCircuitBuffer Functions
 - All the same as CircuitBuffer
 
 - `Add(item T) error`: Adds a new item to the buffer. The item must be greater than or equal to the last item in the buffer.
 
 - `Search(value T) index int, found bool`: Performs a binary search for a value in the buffer. Returns the index of the value and a boolean indicating whether the value was found.
+
+> **`All functions are thread safe.`**
 
 ## Limitations
 

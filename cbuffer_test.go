@@ -23,8 +23,10 @@ func TestOrderedIntCB(t *testing.T) {
 	cb.Add(3)
 	cb.Add(4)
 
-	var zeroItem IntComparable
-	zeroItem = 2
+	t.Logf("CircuitBuffer cap: %v", cb.Cap())
+	t.Logf("CircuitBuffer len: %v", cb.Len())
+
+	zeroItem := IntComparable(2)
 
 	if cb.GetItem(0) != zeroItem {
 		t.Fatalf("%v != %v", cb.GetItem(0), zeroItem)
@@ -73,10 +75,10 @@ func TestOCBIteration(t *testing.T) {
 }
 
 func TestCBBreakIteration(t *testing.T) {
-	cb := NewCircuitBuffer[D](3)
+	cb := NewCircuitBuffer[int](3)
 
 	for i := range []int{1, 3, 5, 4} {
-		cb.Add(D{i})
+		cb.Add(i)
 	}
 
 	index := 0
@@ -86,7 +88,7 @@ func TestCBBreakIteration(t *testing.T) {
 		t.Logf("Element %v: %v", index, *item)
 
 		// Check that no iteration object created and related
-		if item.value != 3 {
+		if *item != 3 {
 			cb.Break()
 			break
 		}
@@ -101,10 +103,10 @@ func TestCBBreakIteration(t *testing.T) {
 }
 
 func TestOCBWrongBreakIteration(t *testing.T) {
-	ocb := NewOrderedCircuitBuffer[D](3)
+	ocb := NewOrderedCircuitBuffer[IntComparable](3)
 
 	for i := range []int{1, 3, 5, 4} {
-		err := ocb.Add(D{i})
+		err := ocb.Add(IntComparable(i))
 
 		if err != nil && i != 4 {
 			t.Fatalf("%v can't be inserted into ocb %v", i, ocb)
@@ -114,10 +116,10 @@ func TestOCBWrongBreakIteration(t *testing.T) {
 }
 
 func TestOCBSearch(t *testing.T) {
-	ocb := NewOrderedCircuitBuffer[D](100)
+	ocb := NewOrderedCircuitBuffer[IntComparable](100)
 
 	for i := 0; i < 100; i++ {
-		err := ocb.Add(D{i})
+		err := ocb.Add(IntComparable(i))
 
 		if err != nil {
 			t.Fatalf("%v can't be inserted into ocb %s", i, ocb)
@@ -125,7 +127,7 @@ func TestOCBSearch(t *testing.T) {
 	}
 
 	expected := 55
-	index, found := ocb.Search(D{expected})
+	index, found := ocb.Search(IntComparable(expected))
 	if !found {
 		t.Fatalf("%v can't be found in ocb %s", expected, ocb)
 	}
@@ -137,18 +139,18 @@ func TestOCBSearch(t *testing.T) {
 }
 
 func TestOCBSearchNotFound(t *testing.T) {
-	ocb := NewOrderedCircuitBuffer[D](50)
+	ocb := NewOrderedCircuitBuffer[IntComparable](50)
 
 	for i := 0; i < 100; i++ {
-		err := ocb.Add(D{i})
+		err := ocb.Add(IntComparable(i))
 
 		if err != nil {
 			t.Fatalf("%v can't be inserted into ocb %s", i, ocb)
 		}
 	}
 
-	expected := 20
-	index, found := ocb.Search(D{expected})
+	expected := IntComparable(20)
+	index, found := ocb.Search(expected)
 	if found {
 		t.Fatalf("%v couldn't be found in ocb %s", expected, ocb)
 	}
