@@ -84,12 +84,11 @@ package main
 
 import (
 	"fmt"
-	"github.com/SokolDuck/cbuffer"
+
+	cb "github.com/SokolDuck/cbuffer"
 )
 
-type StringComparable string
-
-func ProcessLogs(buffer cbuffer.CircuitBuffer[string]) {
+func ProcessLogs(buffer *cb.CircuitBuffer[string]) {
 	// Call buffer.Break() if the Iter loop stops before it runs out of data. Or call it with "deffer" to make sure you don't spawn dead goroutines.
 	defer buffer.Break()
 
@@ -100,7 +99,7 @@ func ProcessLogs(buffer cbuffer.CircuitBuffer[string]) {
 }
 
 func main() {
-	cb := cbuffer.NewCircuitBuffer[string](5)
+	cb := cb.NewCircuitBuffer[string](5)
 
 	logs := []string{"Log1", "Log2", "Log3", "Log4", "Log5", "Log6", "Log7"}
 
@@ -119,16 +118,17 @@ package main
 
 import (
 	"fmt"
-	"github.com/yourusername/cbuffer"
+
+	cb "github.com/SokolDuck/cbuffer"
 )
 
 type TimeSeriesData struct {
 	timestamp int
-	data	  int
+	data      int
 }
 
 func (ts TimeSeriesData) Less(other TimeSeriesData) bool {
-	return i.timestamp < other.timestamp
+	return ts.timestamp < other.timestamp
 }
 
 func (ts TimeSeriesData) Equal(other TimeSeriesData) bool {
@@ -136,34 +136,40 @@ func (ts TimeSeriesData) Equal(other TimeSeriesData) bool {
 }
 
 func main() {
-	cb := cbuffer.NewOrderedCircuitBuffer[TimeSeriesData](5)
+	cbuf := cb.NewOrderedCircuitBuffer[TimeSeriesData](5)
 
-	dataPoints := []TimeSeriesData{}
+	dataPoints := make([]TimeSeriesData, 8)
 
 	for i := 0; i < 8; i++ {
-		append(dataPoints, TimeSeriesData{
+		tsd := TimeSeriesData{
 			timestamp: i,
-			data: i ** i,
-		})
+			data:      i * i,
+		}
+		dataPoints = append(dataPoints, tsd)
 	}
 
 	for _, dataPoint := range dataPoints {
-		err := cb.Add(dataPoint)
+		err := cbuf.Add(dataPoint)
 		if err != nil {
 			fmt.Println("Error occurred while adding:", err)
 		}
 	}
 
-	for v := range cb.Iter() {
+	for v := range cbuf.Iter() {
 		fmt.Println(*v)
 
-		if v.data > 10  {
-			cb.Break()
+		if v.data > 10 {
+			cbuf.Break()
 			break // or continue - behavior will be the same after calling cb.Break()
 		}
 	}
 
-	index, found := cb.Search(4)
+	searchItem := new(TimeSeriesData)
+	searchItem.timestamp = 4
+
+	index, found := cbuf.Search(*searchItem)
+	fmt.Printf("buf: %v\n", cbuf)
 	fmt.Printf("Searching for 4, Index: %v, Found: %v\n", index, found)
 }
+
 ```

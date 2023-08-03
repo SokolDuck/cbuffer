@@ -171,7 +171,7 @@ func (ocb *OrderedCircuitBuffer[T]) Search(value T) (index int, found bool) {
 		} else if item.Less(value) {
 			start = index + 1
 		} else {
-			end = index - 1
+			end = index
 		}
 
 	}
